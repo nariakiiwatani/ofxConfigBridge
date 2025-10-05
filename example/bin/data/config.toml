@@ -1,0 +1,40 @@
+# Example TOML configuration file
+title = "Example Configuration"
+
+[database]
+host = "localhost"
+port = 5432
+user = "admin"
+password = "secret"
+enabled = true
+
+[window]
+width = 1280
+height = 720
+fullscreen = false
+title = "My App"
+
+[graphics]
+fps = 60
+vsync = true
+quality = "high"
+
+[features]
+debug_mode = false
+logging = true
+auto_save = true
+
+[[servers]]
+name = "primary"
+ip = "192.168.1.100"
+port = 8080
+
+[[servers]]
+name = "backup"
+ip = "192.168.1.101"
+port = 8081
+
+[colors]
+background = [0.2, 0.2, 0.2]
+foreground = [1.0, 1.0, 1.0]
+accent = [0.3, 0.7, 1.0]

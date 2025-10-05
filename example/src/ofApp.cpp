@@ -4,18 +4,25 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
 	{
-		// implicit type indferring
-		YAML::Node y;
-		ofx::configbridge::loadFile("config.yaml", y);
-		nlohmann::ordered_json j;
-		ofx::configbridge::convert(y, j);
-		ofx::configbridge::saveFile("out.json", j);
+		auto y = ofx::configbridge::loadFile<YAML::Node>("config.yaml");
+		auto j = ofx::configbridge::convert<nlohmann::ordered_json>(y);
+		ofx::configbridge::saveFile("yaml_to_json.json", j);
+		auto t = ofx::configbridge::convert<toml::ordered_value>(y);
+		ofx::configbridge::saveFile("yaml_to_toml.toml", t);
 	}
 	{
-		// explicit specification
 		auto j = ofx::configbridge::loadFile<nlohmann::ordered_json>("config.json");
 		auto y = ofx::configbridge::convert<YAML::Node>(j);
-		ofx::configbridge::saveFile("out.yaml", y);
+		ofx::configbridge::saveFile("json_to_yaml.yaml", y);
+		auto t = ofx::configbridge::convert<toml::ordered_value>(j);
+		ofx::configbridge::saveFile("json_to_toml.toml", t);
+	}
+	{
+		auto t = ofx::configbridge::loadFile<toml::ordered_value>("config.toml");
+		auto j = ofx::configbridge::convert<nlohmann::ordered_json>(t);
+		ofx::configbridge::saveFile("toml_to_json.json", j);
+		auto y = ofx::configbridge::convert<YAML::Node>(t);
+		ofx::configbridge::saveFile("toml_to_yaml.yaml", y);
 	}
 }
 

@@ -1,13 +1,13 @@
 #pragma once
 #include "ofxConfigBridgeAdapter.hpp"
-#include "yaml.h"
+#include "toml.hpp"
 
 namespace ofx { namespace configbridge {
 
-class AdapterYamlCpp final : public IAdapter {
+class AdapterToml final : public IAdapter {
 public:
-    Format format() const override { return Format::Yaml; }
-    const char* name() const override { return "yaml-cpp"; }
+    Format format() const override { return Format::Toml; }
+    const char* name() const override { return "toml11"; }
 
     Result parseText(std::string_view text, Document& out, const Options& opt) override;
     Result loadFile (const std::string& path, Document& out, const Options& opt) override;

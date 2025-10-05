@@ -23,19 +23,26 @@ template<> struct DomFormat<YAML::Node> {
     static constexpr Format value = Format::Yaml;
     static constexpr Document::Type doc_type = Document::Type::Yaml;
 };
+template<> struct DomFormat<toml::ordered_value> {
+    static constexpr Format value = Format::Toml;
+    static constexpr Document::Type doc_type = Document::Type::Toml;
+};
 
 namespace detail {
     inline void set_doc(Document& d, nlohmann::json v){ d.type = Document::Type::Json;        d.dom = std::move(v); }
     inline void set_doc(Document& d, nlohmann::ordered_json v){ d.type = Document::Type::OrderedJson; d.dom = std::move(v); }
     inline void set_doc(Document& d, YAML::Node v){ d.type = Document::Type::Yaml;            d.dom = std::move(v); }
+    inline void set_doc(Document& d, toml::ordered_value v){ d.type = Document::Type::Toml;           d.dom = std::move(v); }
 
     inline const nlohmann::json&         get_json (const Document& d){ return std::get<nlohmann::json>(d.dom); }
     inline const nlohmann::ordered_json& get_oj   (const Document& d){ return std::get<nlohmann::ordered_json>(d.dom); }
     inline const YAML::Node&             get_yaml (const Document& d){ return std::get<YAML::Node>(d.dom); }
+    inline const toml::ordered_value&            get_toml (const Document& d){ return std::get<toml::ordered_value>(d.dom); }
 
     inline nlohmann::json&               get_json (Document& d){ return std::get<nlohmann::json>(d.dom); }
     inline nlohmann::ordered_json&       get_oj   (Document& d){ return std::get<nlohmann::ordered_json>(d.dom); }
     inline YAML::Node&                   get_yaml (Document& d){ return std::get<YAML::Node>(d.dom); }
+    inline toml::ordered_value&                  get_toml (Document& d){ return std::get<toml::ordered_value>(d.dom); }
 }
 
 template<class Dom>
@@ -67,6 +74,9 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
     } else if constexpr (std::is_same_v<Dom, YAML::Node>) {
         if (doc.type != Document::Type::Yaml) return Result{false, "loaded document is not YAML"};
         out = detail::get_yaml(doc);
+    } else if constexpr (std::is_same_v<Dom, toml::ordered_value>) {
+        if (doc.type != Document::Type::Toml) return Result{false, "loaded document is not TOML"};
+        out = detail::get_toml(doc);
     } else {
         static_assert(sizeof(Dom)==0, "Unsupported Dom type");
     }
@@ -122,6 +132,9 @@ inline Result parseText(const std::string& text, Dom& out, const Options& opt = 
     } else if constexpr (std::is_same_v<Dom, YAML::Node>) {
         if (doc.type != Document::Type::Yaml) return Result{false, "parsed doc is not YAML"};
         out = detail::get_yaml(doc);
+    } else if constexpr (std::is_same_v<Dom, toml::ordered_value>) {
+        if (doc.type != Document::Type::Toml) return Result{false, "parsed doc is not TOML"};
+        out = detail::get_toml(doc);
     }
     return {};
 }
@@ -136,7 +149,7 @@ inline Result convert(const From& in, To& out, const Options& opt = {}) {
 
     if constexpr (std::is_same_v<To, nlohmann::json>) {
         if (outDoc.type == Document::Type::Json) out = detail::get_json(outDoc);
-        else if (outDoc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(outDoc));
+        else if (outDoc.type == Document::Type::OrderedJson) out = nlohmann::ordered_json(detail::get_oj(outDoc));
         else return Result{false, "converted doc is not JSON"};
     } else if constexpr (std::is_same_v<To, nlohmann::ordered_json>) {
         if (outDoc.type == Document::Type::OrderedJson) out = detail::get_oj(outDoc);
@@ -145,6 +158,9 @@ inline Result convert(const From& in, To& out, const Options& opt = {}) {
     } else if constexpr (std::is_same_v<To, YAML::Node>) {
         if (outDoc.type != Document::Type::Yaml) return Result{false, "converted doc is not YAML"};
         out = detail::get_yaml(outDoc);
+    } else if constexpr (std::is_same_v<To, toml::ordered_value>) {
+        if (outDoc.type != Document::Type::Toml) return Result{false, "converted doc is not TOML"};
+        out = detail::get_toml(outDoc);
     }
     return {};
 }
