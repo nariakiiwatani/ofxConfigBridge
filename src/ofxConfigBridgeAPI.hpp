@@ -13,7 +13,7 @@ template<class Dom> struct DomFormat;
 
 template<> struct DomFormat<nlohmann::json> {
     static constexpr Format value = Format::Json;
-    static constexpr Document::Type doc_type = Document::Type::Json;
+    static constexpr Document::Type doc_type = Document::Type::OrderedJson;
 };
 template<> struct DomFormat<nlohmann::ordered_json> {
     static constexpr Format value = Format::OJson;
@@ -27,22 +27,34 @@ template<> struct DomFormat<toml::ordered_value> {
     static constexpr Format value = Format::Toml;
     static constexpr Document::Type doc_type = Document::Type::Toml;
 };
+template<> struct DomFormat<toml::value> {
+    static constexpr Format value = Format::UToml;
+    static constexpr Document::Type doc_type = Document::Type::Toml;
+};
 
 namespace detail {
-    inline void set_doc(Document& d, nlohmann::json v){ d.type = Document::Type::Json;        d.dom = std::move(v); }
+    inline void set_doc(Document& d, nlohmann::json v){
+        // unordered jsonも内部ではordered_jsonに変換
+        d.type = Document::Type::OrderedJson;
+        d.dom = nlohmann::ordered_json(std::move(v));
+    }
     inline void set_doc(Document& d, nlohmann::ordered_json v){ d.type = Document::Type::OrderedJson; d.dom = std::move(v); }
     inline void set_doc(Document& d, YAML::Node v){ d.type = Document::Type::Yaml;            d.dom = std::move(v); }
     inline void set_doc(Document& d, toml::ordered_value v){ d.type = Document::Type::Toml;           d.dom = std::move(v); }
+    inline void set_doc(Document& d, const toml::value& v) {
+        // Convert unordered toml::value to ordered
+        toml::ordered_value ordered_v = v;
+        d.type = Document::Type::Toml;
+        d.dom = std::move(ordered_v);
+    }
 
-    inline const nlohmann::json&         get_json (const Document& d){ return std::get<nlohmann::json>(d.dom); }
     inline const nlohmann::ordered_json& get_oj   (const Document& d){ return std::get<nlohmann::ordered_json>(d.dom); }
     inline const YAML::Node&             get_yaml (const Document& d){ return std::get<YAML::Node>(d.dom); }
-    inline const toml::ordered_value&            get_toml (const Document& d){ return std::get<toml::ordered_value>(d.dom); }
+    inline const toml::ordered_value&    get_toml (const Document& d){ return std::get<toml::ordered_value>(d.dom); }
 
-    inline nlohmann::json&               get_json (Document& d){ return std::get<nlohmann::json>(d.dom); }
     inline nlohmann::ordered_json&       get_oj   (Document& d){ return std::get<nlohmann::ordered_json>(d.dom); }
     inline YAML::Node&                   get_yaml (Document& d){ return std::get<YAML::Node>(d.dom); }
-    inline toml::ordered_value&                  get_toml (Document& d){ return std::get<toml::ordered_value>(d.dom); }
+    inline toml::ordered_value&          get_toml (Document& d){ return std::get<toml::ordered_value>(d.dom); }
 }
 
 template<class Dom>
@@ -56,9 +68,7 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
     if (!r) return r;
 
     if constexpr (std::is_same_v<Dom, nlohmann::json>) {
-        if (doc.type == Document::Type::Json) {
-            out = detail::get_json(doc);
-        } else if (doc.type == Document::Type::OrderedJson) {
+        if (doc.type == Document::Type::OrderedJson) {
             out = nlohmann::json(detail::get_oj(doc));
         } else {
             return Result{false, "loaded document is not JSON"};
@@ -66,8 +76,6 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
     } else if constexpr (std::is_same_v<Dom, nlohmann::ordered_json>) {
         if (doc.type == Document::Type::OrderedJson) {
             out = detail::get_oj(doc);
-        } else if (doc.type == Document::Type::Json) {
-            out = nlohmann::ordered_json(detail::get_json(doc));
         } else {
             return Result{false, "loaded document is not JSON(ordered)"};
         }
@@ -77,6 +85,10 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
     } else if constexpr (std::is_same_v<Dom, toml::ordered_value>) {
         if (doc.type != Document::Type::Toml) return Result{false, "loaded document is not TOML"};
         out = detail::get_toml(doc);
+    } else if constexpr (std::is_same_v<Dom, toml::value>) {
+        if (doc.type != Document::Type::Toml) return Result{false, "loaded document is not TOML"};
+        auto ordered_v = detail::get_toml(doc);
+        out = toml::value(ordered_v);
     } else {
         static_assert(sizeof(Dom)==0, "Unsupported Dom type");
     }
@@ -122,12 +134,10 @@ inline Result parseText(const std::string& text, Dom& out, const Options& opt = 
     auto r = ad->parseText(text, doc, opt);
     if (!r) return r;
     if constexpr (std::is_same_v<Dom, nlohmann::json>) {
-        if (doc.type == Document::Type::Json) out = detail::get_json(doc);
-        else if (doc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(doc));
+        if (doc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(doc));
         else return Result{false, "parsed doc is not JSON"};
     } else if constexpr (std::is_same_v<Dom, nlohmann::ordered_json>) {
         if (doc.type == Document::Type::OrderedJson) out = detail::get_oj(doc);
-        else if (doc.type == Document::Type::Json) out = nlohmann::ordered_json(detail::get_json(doc));
         else return Result{false, "parsed doc is not JSON(ordered)"};
     } else if constexpr (std::is_same_v<Dom, YAML::Node>) {
         if (doc.type != Document::Type::Yaml) return Result{false, "parsed doc is not YAML"};
@@ -135,6 +145,10 @@ inline Result parseText(const std::string& text, Dom& out, const Options& opt = 
     } else if constexpr (std::is_same_v<Dom, toml::ordered_value>) {
         if (doc.type != Document::Type::Toml) return Result{false, "parsed doc is not TOML"};
         out = detail::get_toml(doc);
+    } else if constexpr (std::is_same_v<Dom, toml::value>) {
+        if (doc.type != Document::Type::Toml) return Result{false, "parsed doc is not TOML"};
+        auto ordered_v = detail::get_toml(doc);
+        out = toml::value(ordered_v);
     }
     return {};
 }
@@ -148,12 +162,10 @@ inline Result convert(const From& in, To& out, const Options& opt = {}) {
     if (!res) return res;
 
     if constexpr (std::is_same_v<To, nlohmann::json>) {
-        if (outDoc.type == Document::Type::Json) out = detail::get_json(outDoc);
-        else if (outDoc.type == Document::Type::OrderedJson) out = nlohmann::ordered_json(detail::get_oj(outDoc));
+        if (outDoc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(outDoc));
         else return Result{false, "converted doc is not JSON"};
     } else if constexpr (std::is_same_v<To, nlohmann::ordered_json>) {
         if (outDoc.type == Document::Type::OrderedJson) out = detail::get_oj(outDoc);
-        else if (outDoc.type == Document::Type::Json) out = nlohmann::ordered_json(detail::get_json(outDoc));
         else return Result{false, "converted doc is not JSON(ordered)"};
     } else if constexpr (std::is_same_v<To, YAML::Node>) {
         if (outDoc.type != Document::Type::Yaml) return Result{false, "converted doc is not YAML"};
@@ -161,6 +173,10 @@ inline Result convert(const From& in, To& out, const Options& opt = {}) {
     } else if constexpr (std::is_same_v<To, toml::ordered_value>) {
         if (outDoc.type != Document::Type::Toml) return Result{false, "converted doc is not TOML"};
         out = detail::get_toml(outDoc);
+    } else if constexpr (std::is_same_v<To, toml::value>) {
+        if (outDoc.type != Document::Type::Toml) return Result{false, "converted doc is not TOML"};
+        auto ordered_v = detail::get_toml(outDoc);
+        out = toml::value(ordered_v);
     }
     return {};
 }

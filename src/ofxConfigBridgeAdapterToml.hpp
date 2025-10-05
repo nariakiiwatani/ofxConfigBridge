@@ -5,9 +5,12 @@
 namespace ofx { namespace configbridge {
 
 class AdapterToml final : public IAdapter {
+private:
+    Format format_;
 public:
-    Format format() const override { return Format::Toml; }
-    const char* name() const override { return "toml11"; }
+    AdapterToml(Format f = Format::Toml) : format_(f) {}
+    Format format() const override { return format_; }
+    const char* name() const override { return format_ == Format::Toml ? "toml11(ordered)" : "toml11(unordered)"; }
 
     Result parseText(std::string_view text, Document& out, const Options& opt) override;
     Result loadFile (const std::string& path, Document& out, const Options& opt) override;

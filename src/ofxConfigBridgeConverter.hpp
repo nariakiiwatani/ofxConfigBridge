@@ -26,7 +26,19 @@ public:
 private:
     std::unordered_map<long long, TextBridge>   text_;
     std::unordered_map<long long, NativeBridge> native_;
-    static long long key(Format a, Format b){ return (long long)static_cast<int>(a)<<32 | (int)b; }
+    static long long key(Format a, Format b){
+        auto normalizeFormat = [](Format f) -> Format {
+            switch(f) {
+                case Format::Json: return Format::OJson;
+                case Format::UToml: return Format::Toml;
+                default: return f;
+            }
+        };
+        
+        Format normalizedA = normalizeFormat(a);
+        Format normalizedB = normalizeFormat(b);
+        return (long long)static_cast<int>(normalizedA)<<32 | (int)normalizedB;
+    }
 };
 
 }} // namespace ofx::configbridge

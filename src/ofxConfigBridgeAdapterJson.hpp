@@ -4,9 +4,15 @@
 namespace ofx { namespace configbridge {
 
 class AdapterJson final : public IAdapter {
+private:
+    Format output_format;
 public:
-    Format format() const override { return Format::Json; }
-    const char* name() const override { return "json-nlohmann"; }
+    AdapterJson(Format fmt) : output_format(fmt) {}
+    
+    Format format() const override { return output_format; }
+    const char* name() const override {
+        return output_format == Format::Json ? "json-nlohmann" : "json-nlohmann-ordered";
+    }
 
     Result parseText(std::string_view text, Document& out, const Options& opt) override;
     Result loadFile (const std::string& path, Document& out, const Options& opt) override;

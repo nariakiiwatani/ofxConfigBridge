@@ -9,6 +9,11 @@ void ofApp::setup(){
 		ofx::configbridge::saveFile("yaml_to_json.json", j);
 		auto t = ofx::configbridge::convert<toml::ordered_value>(y);
 		ofx::configbridge::saveFile("yaml_to_toml.toml", t);
+
+		auto uj = ofx::configbridge::convert<nlohmann::json>(y);
+		ofx::configbridge::saveFile("yaml_to_unordered_json.json", uj);
+		auto ut = ofx::configbridge::convert<toml::value>(y);
+		ofx::configbridge::saveFile("yaml_to_unordered_toml.toml", ut);
 	}
 	{
 		auto j = ofx::configbridge::loadFile<nlohmann::ordered_json>("config.json");
@@ -18,11 +23,33 @@ void ofApp::setup(){
 		ofx::configbridge::saveFile("json_to_toml.toml", t);
 	}
 	{
+		auto j = ofx::configbridge::loadFile<nlohmann::json>("config.json");
+		auto y = ofx::configbridge::convert<YAML::Node>(j);
+		ofx::configbridge::saveFile("unorderd_json_to_yaml.yaml", y);
+		auto t = ofx::configbridge::convert<toml::ordered_value>(j);
+		ofx::configbridge::saveFile("unorderd_json_to_toml.toml", t);
+		auto ut = ofx::configbridge::convert<toml::value>(j);
+		ofx::configbridge::saveFile("unorderd_json_to_unordered_toml.toml", ut);
+	}
+	{
 		auto t = ofx::configbridge::loadFile<toml::ordered_value>("config.toml");
 		auto j = ofx::configbridge::convert<nlohmann::ordered_json>(t);
 		ofx::configbridge::saveFile("toml_to_json.json", j);
 		auto y = ofx::configbridge::convert<YAML::Node>(t);
 		ofx::configbridge::saveFile("toml_to_yaml.yaml", y);
+
+		auto uj = ofx::configbridge::convert<nlohmann::json>(t);
+		ofx::configbridge::saveFile("toml_to_unordered_json.json", uj);
+	}
+	{
+		auto t = ofx::configbridge::loadFile<toml::value>("config.toml");
+		auto j = ofx::configbridge::convert<nlohmann::ordered_json>(t);
+		ofx::configbridge::saveFile("unordered_toml_to_json.json", j);
+		auto y = ofx::configbridge::convert<YAML::Node>(t);
+		ofx::configbridge::saveFile("unordered_toml_to_yaml.yaml", y);
+
+		auto uj = ofx::configbridge::convert<nlohmann::json>(t);
+		ofx::configbridge::saveFile("unordered_toml_to_unordered_json.json", uj);
 	}
 }
 

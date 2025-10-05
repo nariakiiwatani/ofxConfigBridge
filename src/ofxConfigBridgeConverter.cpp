@@ -17,7 +17,6 @@ void Converter::registerNativeBridge(Format from, Format to, NativeBridge fn){
 
 Result Converter::convert(const Document& in, Format to, Document& out, const Options& opt){
     Format from =
-        in.type==Document::Type::Json        ? Format::Json :
         in.type==Document::Type::OrderedJson ? Format::OJson :
 		in.type==Document::Type::Yaml        ? Format::Yaml :
 		in.type==Document::Type::Toml        ? Format::Toml :

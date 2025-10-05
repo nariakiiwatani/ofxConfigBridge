@@ -5,7 +5,7 @@
 
 namespace ofx { namespace configbridge {
 
-enum class Format { Auto, Json, OJson, Yaml, Toml, Ini, Xml };
+enum class Format { Auto, Json, OJson, Yaml, Toml, UToml, Ini, Xml };
 
 inline Format guess_format(std::string_view path){
     auto pos = path.rfind('.');

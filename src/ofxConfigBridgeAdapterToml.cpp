@@ -50,7 +50,10 @@ Result AdapterToml::saveFile(const Document& in, const std::string& path, const 
 
 // static auto-register
 static struct _TomlAutoReg {
-    _TomlAutoReg(){ Registry::instance().registerAdapter(std::make_unique<AdapterToml>()); }
+    _TomlAutoReg(){
+        Registry::instance().registerAdapter(std::make_unique<AdapterToml>(Format::Toml));
+        Registry::instance().registerAdapter(std::make_unique<AdapterToml>(Format::UToml));
+    }
 } _toml_autoreg;
 
 }} // namespace ofx::configbridge
