@@ -13,11 +13,11 @@ template<class Dom> struct DomFormat;
 
 template<> struct DomFormat<nlohmann::json> {
     static constexpr Format value = Format::Json;
-    static constexpr Document::Type doc_type = Document::Type::OrderedJson;
+    static constexpr Document::Type doc_type = Document::Type::Json;
 };
 template<> struct DomFormat<nlohmann::ordered_json> {
-    static constexpr Format value = Format::OJson;
-    static constexpr Document::Type doc_type = Document::Type::OrderedJson;
+    static constexpr Format value = Format::OrderedJson;
+    static constexpr Document::Type doc_type = Document::Type::Json;
 };
 template<> struct DomFormat<YAML::Node> {
     static constexpr Format value = Format::Yaml;
@@ -28,17 +28,16 @@ template<> struct DomFormat<toml::ordered_value> {
     static constexpr Document::Type doc_type = Document::Type::Toml;
 };
 template<> struct DomFormat<toml::value> {
-    static constexpr Format value = Format::UToml;
+    static constexpr Format value = Format::OrderedToml;
     static constexpr Document::Type doc_type = Document::Type::Toml;
 };
 
 namespace detail {
     inline void set_doc(Document& d, nlohmann::json v){
-        // unordered jsonも内部ではordered_jsonに変換
-        d.type = Document::Type::OrderedJson;
+        d.type = Document::Type::Json;
         d.dom = nlohmann::ordered_json(std::move(v));
     }
-    inline void set_doc(Document& d, nlohmann::ordered_json v){ d.type = Document::Type::OrderedJson; d.dom = std::move(v); }
+    inline void set_doc(Document& d, nlohmann::ordered_json v){ d.type = Document::Type::Json; d.dom = std::move(v); }
     inline void set_doc(Document& d, YAML::Node v){ d.type = Document::Type::Yaml;            d.dom = std::move(v); }
     inline void set_doc(Document& d, toml::ordered_value v){ d.type = Document::Type::Toml;           d.dom = std::move(v); }
     inline void set_doc(Document& d, const toml::value& v) {
@@ -68,13 +67,13 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
     if (!r) return r;
 
     if constexpr (std::is_same_v<Dom, nlohmann::json>) {
-        if (doc.type == Document::Type::OrderedJson) {
-            out = nlohmann::json(detail::get_oj(doc));
+        if (doc.type == Document::Type::Json) {
+            out = detail::get_oj(doc);
         } else {
             return Result{false, "loaded document is not JSON"};
         }
     } else if constexpr (std::is_same_v<Dom, nlohmann::ordered_json>) {
-        if (doc.type == Document::Type::OrderedJson) {
+        if (doc.type == Document::Type::Json) {
             out = detail::get_oj(doc);
         } else {
             return Result{false, "loaded document is not JSON(ordered)"};
@@ -133,12 +132,9 @@ inline Result parseText(const std::string& text, Dom& out, const Options& opt = 
     Document doc;
     auto r = ad->parseText(text, doc, opt);
     if (!r) return r;
-    if constexpr (std::is_same_v<Dom, nlohmann::json>) {
-        if (doc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(doc));
-        else return Result{false, "parsed doc is not JSON"};
-    } else if constexpr (std::is_same_v<Dom, nlohmann::ordered_json>) {
-        if (doc.type == Document::Type::OrderedJson) out = detail::get_oj(doc);
-        else return Result{false, "parsed doc is not JSON(ordered)"};
+    if constexpr (std::is_same_v<Dom, nlohmann::json> || std::is_same_v<Dom, nlohmann::ordered_json>) {
+		if (doc.type != Document::Type::Json) return Result{false, "parsed doc is not JSON"};
+		out = detail::get_oj(doc);
     } else if constexpr (std::is_same_v<Dom, YAML::Node>) {
         if (doc.type != Document::Type::Yaml) return Result{false, "parsed doc is not YAML"};
         out = detail::get_yaml(doc);
@@ -161,12 +157,9 @@ inline Result convert(const From& in, To& out, const Options& opt = {}) {
     auto res = Converter::instance().convert(inDoc, toFmt, outDoc, opt);
     if (!res) return res;
 
-    if constexpr (std::is_same_v<To, nlohmann::json>) {
-        if (outDoc.type == Document::Type::OrderedJson) out = nlohmann::json(detail::get_oj(outDoc));
-        else return Result{false, "converted doc is not JSON"};
-    } else if constexpr (std::is_same_v<To, nlohmann::ordered_json>) {
-        if (outDoc.type == Document::Type::OrderedJson) out = detail::get_oj(outDoc);
-        else return Result{false, "converted doc is not JSON(ordered)"};
+    if constexpr (std::is_same_v<To, nlohmann::json> || std::is_same_v<To, nlohmann::ordered_json>) {
+		if (outDoc.type != Document::Type::Json) return Result{false, "converted doc is not JSON"};
+		out = detail::get_oj(outDoc);
     } else if constexpr (std::is_same_v<To, YAML::Node>) {
         if (outDoc.type != Document::Type::Yaml) return Result{false, "converted doc is not YAML"};
         out = detail::get_yaml(outDoc);

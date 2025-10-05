@@ -29,8 +29,8 @@ private:
     static long long key(Format a, Format b){
         auto normalizeFormat = [](Format f) -> Format {
             switch(f) {
-                case Format::Json: return Format::OJson;
-                case Format::UToml: return Format::Toml;
+                case Format::OrderedJson: return Format::Json;
+                case Format::OrderedToml: return Format::Toml;
                 default: return f;
             }
         };

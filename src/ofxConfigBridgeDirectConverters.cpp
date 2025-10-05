@@ -251,38 +251,38 @@ static toml::ordered_value YamlNodeToToml(const YAML::Node& n) {
 static struct _RegisterDirect {
 	_RegisterDirect(){
 		// OrderedJSON ⇔ YAML
-		Converter::instance().registerNativeBridge(Format::OJson, Format::Yaml,
-					  [](const Document& in, Document& out, const Options& opt)->Result{
-			if (in.type != Document::Type::OrderedJson) return {false,"in is not ojson"};
+		Converter::instance().registerNativeBridge(Format::Json, Format::Yaml,
+				  [](const Document& in, Document& out, const Options& opt)->Result{
+			if (in.type != Document::Type::Json) return {false,"in is not ojson"};
 			const auto& j = std::get<nlohmann::ordered_json>(in.dom);
 			YAML::Node y; JsonToYAMLNode(y, j, opt);
 			out.type = Document::Type::Yaml; out.dom = std::move(y); return {};
 		});
 		
-		Converter::instance().registerNativeBridge(Format::Yaml, Format::OJson,
-					  [](const Document& in, Document& out, const Options& opt)->Result{
+		Converter::instance().registerNativeBridge(Format::Yaml, Format::Json,
+				  [](const Document& in, Document& out, const Options& opt)->Result{
 			if (in.type != Document::Type::Yaml) return {false,"in is not yaml"};
 			const auto& y = std::get<Document::YamlDom>(in.dom);
 			nlohmann::ordered_json j = YAMLNodeToOJson(y, opt);
-			out.type = Document::Type::OrderedJson; out.dom = std::move(j); return {};
+			out.type = Document::Type::Json; out.dom = std::move(j); return {};
 		});
 
 		// OrderedJSON ⇔ TOML
-		Converter::instance().registerNativeBridge(Format::OJson, Format::Toml,
-					  [](const Document& in, Document& out, const Options& opt)->Result{
-			if (in.type != Document::Type::OrderedJson) return {false,"in is not ojson"};
+		Converter::instance().registerNativeBridge(Format::Json, Format::Toml,
+				  [](const Document& in, Document& out, const Options& opt)->Result{
+			if (in.type != Document::Type::Json) return {false,"in is not ojson"};
 			const auto& j = std::get<nlohmann::ordered_json>(in.dom);
 			toml::ordered_table t; JsonToTomlTable(t, j, opt);
 			out.type = Document::Type::Toml; out.dom = std::move(t); return {};
 		});
 		
-		Converter::instance().registerNativeBridge(Format::Toml, Format::OJson,
-					  [](const Document& in, Document& out, const Options& opt)->Result{
+		Converter::instance().registerNativeBridge(Format::Toml, Format::Json,
+				  [](const Document& in, Document& out, const Options& opt)->Result{
 			if (in.type != Document::Type::Toml) return {false,"in is not toml"};
 			const auto& v = std::get<Document::TomlDom>(in.dom);
 			if (!v.is_table()) return {false, "toml root is not table"};
 			auto j = TomlValueToJson<nlohmann::ordered_json>(v);
-			out.type = Document::Type::OrderedJson; out.dom = std::move(j); return {};
+			out.type = Document::Type::Json; out.dom = std::move(j); return {};
 		});
 
 		// TOML -> YAML

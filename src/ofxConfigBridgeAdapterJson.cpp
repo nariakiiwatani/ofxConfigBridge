@@ -7,8 +7,8 @@ namespace ofx { namespace configbridge {
 
 Result AdapterJson::parseText(std::string_view text, Document& out, const Options& opt){
 	try{
-		nlohmann::ordered_json oj = nlohmann::ordered_json::parse(text);
-		out.type = Document::Type::OrderedJson;
+		auto oj = nlohmann::ordered_json::parse(text);
+		out.type = Document::Type::Json;
 		out.dom = std::move(oj);
 		return {};
 	}catch(const std::exception& e){ return {false, e.what()};}
@@ -20,7 +20,7 @@ Result AdapterJson::loadFile(const std::string& path, Document& out, const Optio
 	return parseText(oss.str(), out, opt);
 }
 Result AdapterJson::dumpText(const Document& in, std::string& outText, const Options&) {
-	if (in.type != Document::Type::OrderedJson) return {false, "doc type mismatch"};
+	if (in.type != Document::Type::Json) return {false, "doc type mismatch"};
 	
 	const auto& oj = std::get<nlohmann::ordered_json>(in.dom);
 	if (output_format == Format::Json) {
@@ -42,7 +42,7 @@ Result AdapterJson::saveFile(const Document& in, const std::string& path, const 
 static struct _JsonAutoReg {
 	_JsonAutoReg(){
 		Registry::instance().registerAdapter(std::make_unique<AdapterJson>(Format::Json));
-		Registry::instance().registerAdapter(std::make_unique<AdapterJson>(Format::OJson));
+		Registry::instance().registerAdapter(std::make_unique<AdapterJson>(Format::OrderedJson));
 	}
 } _json_autoreg;
 }} // namespace ofx::configbridge

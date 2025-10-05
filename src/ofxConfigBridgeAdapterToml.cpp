@@ -52,7 +52,7 @@ Result AdapterToml::saveFile(const Document& in, const std::string& path, const 
 static struct _TomlAutoReg {
     _TomlAutoReg(){
         Registry::instance().registerAdapter(std::make_unique<AdapterToml>(Format::Toml));
-        Registry::instance().registerAdapter(std::make_unique<AdapterToml>(Format::UToml));
+        Registry::instance().registerAdapter(std::make_unique<AdapterToml>(Format::OrderedToml));
     }
 } _toml_autoreg;
 
