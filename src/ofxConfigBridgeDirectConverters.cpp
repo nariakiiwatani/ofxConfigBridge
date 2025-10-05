@@ -3,115 +3,72 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace ofx { namespace configbridge {
-
-inline static bool TagIs(const YAML::Node& n, const char* tag) {
+namespace {
+inline bool tag_is(const YAML::Node& n, const char* tag) {
 	try { return n.Tag() == tag; } catch (...) { return false; }
 }
-inline static std::string ScalarOf(const YAML::Node& n) {
+inline std::string scalar_of(const YAML::Node& n) {
 	try { return n.Scalar(); } catch (...) { return std::string(); }
 }
+inline bool is_null_token(const std::string& s){
+	return s == "~" || s == "null" || s == "Null" || s == "NULL";
+}
+inline static std::string format_float_preserving_decimal(double v, int float_precision){
+	std::ostringstream oss;
+	if (std::isfinite(v) && std::floor(v) == v){
+		oss.setf(std::ios::fixed);
+		oss << std::setprecision(1) << v;
+	} else {
+		int prec = (float_precision > 0 ? float_precision : 6);
+		oss << std::defaultfloat << std::setprecision(prec) << v;
+	}
+	return oss.str();
+}
+
+}
+namespace ofx { namespace configbridge {
 
 template<class BasicJson>
-static BasicJson YamlScalarToJson(const YAML::Node& n, const Options& opt) {
+static BasicJson YamlScalarToJson(const YAML::Node& n) {
 	using J = BasicJson;
 
-	if (TagIs(n, "!!str")) {
-		return J(ScalarOf(n));
-	}
+	if (tag_is(n, "!!str")) return J(scalar_of(n));
 
-	const std::string s = ScalarOf(n);
+	try { return J(n.as<bool>()); } catch (...) {}
+	try { return J(n.as<long long>()); } catch (...) {}
+	try { return J(n.as<unsigned long long>()); } catch (...) {}
+	try { return J(n.as<double>()); } catch (...) {}
 
-	if(!opt.auto_boolean_conversion) {
-		if (TagIs(n, "!!bool")) {
-			try { return J(n.as<bool>()); } catch (...) {}
-		}
-		if (s == "true")  return J(true);
-		if (s == "false") return J(false);
-	} else {
-		try { return J(n.as<bool>()); } catch (...) {}
-	}
-
-	if(!opt.auto_number_conversion) {
-		if (TagIs(n, "!!int")) {
-			try { return J(n.as<long long>()); } catch (...) {}
-			try { return J(n.as<unsigned long long>()); } catch (...) {}
-		}
-		if (TagIs(n, "!!float")) {
-			try { return J(n.as<double>()); } catch (...) {}
-		}
-	} else {
-		try { return J(n.as<long long>()); } catch (...) {}
-		try { return J(n.as<unsigned long long>()); } catch (...) {}
-		try { return J(n.as<double>()); } catch (...) {}
-	}
-
-	if (s == "~" || s == "null" || s == "Null" || s == "NULL") {
-		return nullptr;
-	}
+	const auto s = scalar_of(n);
+	if (is_null_token(s)) return nullptr;
 
 	return J(s);
 }
 
-static nlohmann::json YAMLNodeToJson(const YAML::Node& n, const Options& opt){
+static nlohmann::json YAMLNodeToJson(const YAML::Node& n, const Options& /*opt*/){
 	using json = nlohmann::json;
-	if (n.IsMap()){
-		json obj = json::object();
-		for (auto it = n.begin(); it != n.end(); ++it){
-			std::string key = it->first.as<std::string>();
-			obj[key] = YAMLNodeToJson(it->second, opt);
-		}
-		return obj;
-	}
-	if (n.IsSequence()){
-		json arr = json::array();
-		for (auto it = n.begin(); it != n.end(); ++it){
-			arr.push_back(YAMLNodeToJson(*it, opt));
-		}
-		return arr;
-	}
+	if (n.IsMap()){ json o=json::object(); for(auto it=n.begin(); it!=n.end(); ++it) o[it->first.as<std::string>()]=YAMLNodeToJson(it->second, {}); return o; }
+	if (n.IsSequence()){ json a=json::array(); for(auto it=n.begin(); it!=n.end(); ++it) a.push_back(YAMLNodeToJson(*it, {})); return a; }
 	if (n.IsNull()) return nullptr;
-
-	return YamlScalarToJson<json>(n, opt);
+	return YamlScalarToJson<json>(n);
 }
 
-static nlohmann::ordered_json YAMLNodeToOJson(const YAML::Node& n, const Options& opt){
+static nlohmann::ordered_json YAMLNodeToOJson(const YAML::Node& n, const Options& /*opt*/){
 	using ojson = nlohmann::ordered_json;
-	if (n.IsMap()){
-		ojson obj = ojson::object();
-		for (auto it = n.begin(); it != n.end(); ++it){
-			obj[it->first.as<std::string>()] = YAMLNodeToOJson(it->second, opt);
-		}
-		return obj;
-	}
-	if (n.IsSequence()){
-		ojson arr = ojson::array();
-		for (auto it = n.begin(); it != n.end(); ++it){
-			arr.push_back(YAMLNodeToOJson(*it, opt));
-		}
-		return arr;
-	}
+	if (n.IsMap()){ ojson o=ojson::object(); for(auto it=n.begin(); it!=n.end(); ++it) o[it->first.as<std::string>()]=YAMLNodeToOJson(it->second, {}); return o; }
+	if (n.IsSequence()){ ojson a=ojson::array(); for(auto it=n.begin(); it!=n.end(); ++it) a.push_back(YAMLNodeToOJson(*it, {})); return a; }
 	if (n.IsNull()) return nullptr;
-
-	return YamlScalarToJson<ojson>(n, opt);
+	return YamlScalarToJson<ojson>(n);
 }
 
 template<class BasicJson>
 static void JsonToYAMLNode(YAML::Node& node, const BasicJson& j, const Options& opt){
 	if (j.is_object()){
 		node = YAML::Node(YAML::NodeType::Map);
-		for (auto it = j.begin(); it != j.end(); ++it){
-			YAML::Node child;
-			JsonToYAMLNode(child, it.value(), opt);
-			node[it.key()] = child;
-		}
+		for (auto it=j.begin(); it!=j.end(); ++it){ YAML::Node c; JsonToYAMLNode(c, it.value(), {}); node[it.key()] = c; }
 	} else if (j.is_array()){
 		node = YAML::Node(YAML::NodeType::Sequence);
-		for (auto& v : j){
-			YAML::Node child;
-			JsonToYAMLNode(child, v, opt);
-			node.push_back(child);
-		}
+		for (auto& v : j){ YAML::Node c; JsonToYAMLNode(c, v, {}); node.push_back(c); }
 	} else if (j.is_boolean()){
 		node = YAML::Node(j.template get<bool>());
 	} else if (j.is_number_integer()){
@@ -119,9 +76,15 @@ static void JsonToYAMLNode(YAML::Node& node, const BasicJson& j, const Options& 
 	} else if (j.is_number_unsigned()){
 		node = YAML::Node(j.template get<unsigned long long>());
 	} else if (j.is_number_float()){
-		node = YAML::Node(j.template get<double>());
+		const double v = j.template get<double>();
+		if (std::isfinite(v) && std::floor(v) == v) {
+			std::string s = format_float_preserving_decimal(v, opt.float_precision);
+			node = YAML::Node(s);
+		} else {
+			node = YAML::Node(v);
+		}
 	} else if (j.is_null()){
-		node = YAML::Node(); // null
+		node = YAML::Node();
 	} else {
 		node = YAML::Node(j.template get<std::string>());
 	}
