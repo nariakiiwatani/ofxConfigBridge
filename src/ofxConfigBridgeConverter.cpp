@@ -57,4 +57,4 @@ Result Converter::convertFile(const std::string& inPath, Format inFmt,
     return {};
 }
 
-}} // namespace ofx::configbridge6
+}} // namespace ofx::configbridge

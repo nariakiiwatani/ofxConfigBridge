@@ -28,13 +28,75 @@ Result AdapterToml::loadFile(const std::string& path, Document& out){
     }
 }
 
+std::string formatFloatForToml(double value, int precision) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(precision) << value;
+    std::string result = ss.str();
+    
+    // Remove trailing zeros, but keep at least one decimal place
+    if (result.find('.') != std::string::npos) {
+        while (result.length() > 2 && result.back() == '0') {
+            result.pop_back();
+        }
+        // Ensure integers like 1 become 1.0 (keep at least one decimal place)
+        if (result.back() == '.') {
+            result += '0';
+        }
+    }
+    
+    return result;
+}
+
+void formatTomlValue(const toml::ordered_value& value, std::ostringstream& ss, int precision, int indent_level = 0) {
+    std::string indent(indent_level * 2, ' ');
+    
+    switch (value.type()) {
+        case toml::value_t::floating:
+            ss << formatFloatForToml(value.as_floating(), precision);
+            break;
+        case toml::value_t::integer:
+            ss << value.as_integer();
+            break;
+        case toml::value_t::boolean:
+            ss << (value.as_boolean() ? "true" : "false");
+            break;
+        case toml::value_t::string:
+            ss << "\"" << value.as_string() << "\"";
+            break;
+        case toml::value_t::array: {
+            const auto& arr = value.as_array();
+            ss << "[";
+            for (size_t i = 0; i < arr.size(); ++i) {
+                if (i > 0) ss << ", ";
+                formatTomlValue(arr[i], ss, precision, indent_level);
+            }
+            ss << "]";
+            break;
+        }
+        case toml::value_t::table: {
+            const auto& table = value.as_table();
+            bool first = true;
+            for (const auto& [key, val] : table) {
+                if (!first) ss << "\n";
+                first = false;
+                ss << indent << key << " = ";
+                formatTomlValue(val, ss, precision, indent_level);
+            }
+            break;
+        }
+        default:
+            // Fallback to library formatting for other types
+            ss << toml::format(value);
+            break;
+    }
+}
+
 Result AdapterToml::dumpText(const Document& in, std::string& outText, const Options& opt){
     if (in.type != Document::Type::Toml) return Result{false, "doc type mismatch(toml)"};
     const auto& value = std::get<Document::TomlDom>(in.dom);
 
     std::ostringstream ss;
-    ss << std::setprecision(opt.float_precision);
-    ss << toml::format(value);
+    formatTomlValue(value, ss, opt.float_precision);
     outText = ss.str();
     return {};
 }

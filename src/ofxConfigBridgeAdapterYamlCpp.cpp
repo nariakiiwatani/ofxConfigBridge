@@ -30,7 +30,20 @@ Result AdapterYamlCpp::loadFile(const std::string& path, Document& out){
 std::string formatFloatForYaml(double value, int precision) {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(precision) << value;
-    return ss.str();
+    std::string result = ss.str();
+    
+    // Remove trailing zeros, but keep at least one decimal place
+    if (result.find('.') != std::string::npos) {
+        while (result.length() > 2 && result.back() == '0') {
+            result.pop_back();
+        }
+        // Ensure integers like 1 become 1.0 (keep at least one decimal place)
+        if (result.back() == '.') {
+            result += '0';
+        }
+    }
+    
+    return result;
 }
 
 YAML::Node applyPrecisionToYamlNode(const YAML::Node& node, int precision) {

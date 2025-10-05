@@ -51,7 +51,22 @@ Result AdapterJson::dumpText(const Document& in, std::string& outText, const Opt
 			}
 			ss << "\n" << spaces << "]";
 		} else if (obj.is_number_float()) {
-			ss << std::fixed << std::setprecision(opt.float_precision) << obj.get<double>();
+			std::ostringstream temp_ss;
+			temp_ss << std::fixed << std::setprecision(opt.float_precision) << obj.get<double>();
+			std::string float_str = temp_ss.str();
+			
+			// Remove trailing zeros, but keep at least one decimal place
+			if (float_str.find('.') != std::string::npos) {
+				while (float_str.length() > 2 && float_str.back() == '0') {
+					float_str.pop_back();
+				}
+				// Ensure integers like 1 become 1.0 (keep at least one decimal place)
+				if (float_str.back() == '.') {
+					float_str += '0';
+				}
+			}
+			
+			ss << float_str;
 		} else if (obj.is_string()) {
 			ss << "\"" << obj.get<std::string>() << "\"";
 		} else if (obj.is_boolean()) {
