@@ -1,0 +1,91 @@
+# ofxConfigBridge manual test YAML
+title: ofxConfigBridge Test
+version: 1
+flags:
+  enabled: true
+  dry_run: false
+  feature_list: [alpha, beta, "gamma-delta"]
+paths:
+  input: "data/input.txt"
+  output: "data/output.txt"
+  empty:
+numbers:
+  int_small: 42
+  int_large: 9223372036854775807
+  uint_like: 18446744073709551615
+  negative: -123
+  zero: 0
+  float_simple: 3.14159
+  float_sci: 6.022e23
+  float_neg_zero: -0.0
+  float_inf_like: "inf"
+  not_a_number: "NaN"
+strings:
+  normal: "hello"
+  with_space: "hello world"
+  needs_quoting: "true"
+  numeric_like: "0123"
+  empty_string: ""
+  multiline_lit: |
+    line1
+    line2
+      indented
+    lastline
+  multiline_folded: >
+    This is a folded
+    line that should become
+    a single paragraph.
+arrays:
+  of_scalars: [1, 2, 3, 4]
+  of_mixed: [1, "2", true, null, 3.14]
+  of_objects:
+    - {x: 1, y: 2}
+    - {x: 3, y: 4, tag: "pt"}
+  of_arrays:
+    - [1, 2]
+    - [3, 4, 5]
+objects:
+  nested:
+    a:
+      b:
+        c: "deep"
+  empty_obj: {}
+nulls:
+  explicit: null
+  implicit:
+unicode:
+  japanese: "日本語"
+  emoji: "🍣🚀"
+dates_and_times:
+  date_string: "2025-10-05"
+  datetime_string: "2025-10-05T12:34:56Z"
+  not_date: "2025/13/99"
+edge_keys:
+  "?question?": "value"
+  "key:with:colons": "ok"
+  "brackets[0]": "name"
+  "dot.separated": "dot"
+sequence_of_maps:
+  - name: alice
+    scores: [10, 9, 8]
+  - name: bob
+    scores:
+      math: 100
+      art: 80
+map_of_sequences:
+  groupA: [a, b, c]
+  groupB:
+    - d
+    - e
+bool_like_strings:
+  yes_str: "yes"
+  no_str: "no"
+  on_str: "on"
+  off_str: "off"
+aliases:
+  base: &base
+    a: 1
+    b: 2
+  derived:
+    <<: *base
+    b: 3
