@@ -2,7 +2,7 @@
 #include "ofxConfigBridgeAPI.hpp"
 
 //--------------------------------------------------------------
-void ofApp::setup(){
+void ofApp::setup(){	
 	{
 		auto y = ofx::configbridge::loadFile<YAML::Node>("config.yaml");
 		auto j = ofx::configbridge::convert<nlohmann::ordered_json>(y);

@@ -12,8 +12,8 @@ public:
     Format format() const override { return format_; }
     const char* name() const override { return format_ == Format::Toml ? "toml11(ordered)" : "toml11(unordered)"; }
 
-    Result parseText(std::string_view text, Document& out, const Options& opt) override;
-    Result loadFile (const std::string& path, Document& out, const Options& opt) override;
+    Result parseText(std::string_view text, Document& out) override;
+    Result loadFile (const std::string& path, Document& out) override;
     Result dumpText (const Document& in, std::string& outText, const Options& opt) override;
     Result saveFile (const Document& in, const std::string& path, const Options& opt) override;
 };

@@ -2,10 +2,11 @@
 #include "ofxConfigBridgeRegistry.hpp"
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 namespace ofx { namespace configbridge {
 
-Result AdapterToml::parseText(std::string_view text, Document& out, const Options&){
+Result AdapterToml::parseText(std::string_view text, Document& out){
     try{
         auto value = toml::parse_str<toml::ordered_type_config>(std::string(text));
         out.type = Document::Type::Toml;
@@ -16,7 +17,7 @@ Result AdapterToml::parseText(std::string_view text, Document& out, const Option
     }
 }
 
-Result AdapterToml::loadFile(const std::string& path, Document& out, const Options&){
+Result AdapterToml::loadFile(const std::string& path, Document& out){
     try{
         auto value = toml::parse<toml::ordered_type_config>(path);
         out.type = Document::Type::Toml;
@@ -32,6 +33,7 @@ Result AdapterToml::dumpText(const Document& in, std::string& outText, const Opt
     const auto& value = std::get<Document::TomlDom>(in.dom);
 
     std::ostringstream ss;
+    ss << std::setprecision(opt.float_precision);
     ss << toml::format(value);
     outText = ss.str();
     return {};

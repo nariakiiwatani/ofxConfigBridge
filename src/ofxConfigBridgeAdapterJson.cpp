@@ -2,10 +2,12 @@
 #include "ofxConfigBridgeRegistry.hpp"
 #include <fstream>
 #include <sstream>
+#include <iomanip>
+#include <functional>
 
 namespace ofx { namespace configbridge {
 
-Result AdapterJson::parseText(std::string_view text, Document& out, const Options& opt){
+Result AdapterJson::parseText(std::string_view text, Document& out){
 	try{
 		auto oj = nlohmann::ordered_json::parse(text);
 		out.type = Document::Type::Json;
@@ -13,22 +15,65 @@ Result AdapterJson::parseText(std::string_view text, Document& out, const Option
 		return {};
 	}catch(const std::exception& e){ return {false, e.what()};}
 }
-Result AdapterJson::loadFile(const std::string& path, Document& out, const Options& opt){
+Result AdapterJson::loadFile(const std::string& path, Document& out){
 	std::ifstream ifs(path, std::ios::binary);
 	if(!ifs) return Result{false, "open json failed"};
 	std::ostringstream oss; oss<<ifs.rdbuf();
-	return parseText(oss.str(), out, opt);
+	return parseText(oss.str(), out);
 }
-Result AdapterJson::dumpText(const Document& in, std::string& outText, const Options&) {
+Result AdapterJson::dumpText(const Document& in, std::string& outText, const Options& opt) {
 	if (in.type != Document::Type::Json) return {false, "doc type mismatch"};
 	
 	const auto& oj = std::get<nlohmann::ordered_json>(in.dom);
+	
+	std::function<void(const nlohmann::ordered_json&, std::ostringstream&, int)> serializeJson;
+	serializeJson = [&](const nlohmann::ordered_json& obj, std::ostringstream& ss, int indent) {
+		std::string spaces(indent, ' ');
+		
+		if (obj.is_object()) {
+			ss << "{\n";
+			bool first = true;
+			for (auto it = obj.begin(); it != obj.end(); ++it) {
+				if (!first) ss << ",\n";
+				first = false;
+				ss << spaces << "  \"" << it.key() << "\": ";
+				serializeJson(it.value(), ss, indent + 2);
+			}
+			ss << "\n" << spaces << "}";
+		} else if (obj.is_array()) {
+			ss << "[\n";
+			bool first = true;
+			for (const auto& elem : obj) {
+				if (!first) ss << ",\n";
+				first = false;
+				ss << spaces << "  ";
+				serializeJson(elem, ss, indent + 2);
+			}
+			ss << "\n" << spaces << "]";
+		} else if (obj.is_number_float()) {
+			ss << std::fixed << std::setprecision(opt.float_precision) << obj.get<double>();
+		} else if (obj.is_string()) {
+			ss << "\"" << obj.get<std::string>() << "\"";
+		} else if (obj.is_boolean()) {
+			ss << (obj.get<bool>() ? "true" : "false");
+		} else if (obj.is_null()) {
+			ss << "null";
+		} else if (obj.is_number_integer()) {
+			ss << obj.get<int64_t>();
+		} else if (obj.is_number_unsigned()) {
+			ss << obj.get<uint64_t>();
+		}
+	};
+	
+	std::ostringstream ss;
 	if (output_format == Format::Json) {
 		nlohmann::json j = nlohmann::json(oj);
-		outText = j.dump(2);
+		serializeJson(nlohmann::ordered_json(j), ss, 0);
 	} else {
-		outText = oj.dump(2);
+		serializeJson(oj, ss, 0);
 	}
+	
+	outText = ss.str();
 	return {};
 }
 Result AdapterJson::saveFile(const Document& in, const std::string& path, const Options& opt){

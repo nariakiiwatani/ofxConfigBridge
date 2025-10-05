@@ -98,12 +98,19 @@ dumpText(parsed, output);
 ## 🔧 設定オプション
 
 ```cpp
+// オプションは変換と出力操作で使用されます
 Options opt;
-opt.auto_number_conversion = true;   // 数値文字列の自動変換
-opt.auto_boolean_conversion = true;  // ブール文字列の自動変換
-opt.float_precision = 6;             // 浮動小数点の出力精度
+opt.float_precision = 6;  // 浮動小数点の出力精度を制御
 
-auto result = loadFile<YAML::Node>("config.yaml", opt);
+// オプション付きで変換
+auto json = convert<nlohmann::json>(yaml, opt);
+
+// オプション付きでテキスト出力
+std::string output;
+dumpText(data, output, opt);
+
+// オプション付きでファイル保存
+saveFile("output.json", data, opt);
 ```
 
 ---

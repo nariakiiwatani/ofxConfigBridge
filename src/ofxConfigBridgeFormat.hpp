@@ -27,9 +27,7 @@ struct Result {
 };
 
 struct Options {
-    bool auto_number_conversion = true;
-    bool auto_boolean_conversion = true;
-    int  float_precision = 6;
+    int float_precision = 6;
 };
 
 }} // namespace ofx::configbridge

@@ -14,8 +14,8 @@ public:
         return output_format == Format::Json ? "json-nlohmann" : "json-nlohmann-ordered";
     }
 
-    Result parseText(std::string_view text, Document& out, const Options& opt) override;
-    Result loadFile (const std::string& path, Document& out, const Options& opt) override;
+    Result parseText(std::string_view text, Document& out) override;
+    Result loadFile (const std::string& path, Document& out) override;
     Result dumpText (const Document& in, std::string& outText, const Options& opt) override;
     Result saveFile (const Document& in, const std::string& path, const Options& opt) override;
 };

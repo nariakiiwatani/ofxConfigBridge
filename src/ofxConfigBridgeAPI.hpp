@@ -41,7 +41,6 @@ namespace detail {
     inline void set_doc(Document& d, YAML::Node v){ d.type = Document::Type::Yaml;            d.dom = std::move(v); }
     inline void set_doc(Document& d, toml::ordered_value v){ d.type = Document::Type::Toml;           d.dom = std::move(v); }
     inline void set_doc(Document& d, const toml::value& v) {
-        // Convert unordered toml::value to ordered
         toml::ordered_value ordered_v = v;
         d.type = Document::Type::Toml;
         d.dom = std::move(ordered_v);
@@ -57,13 +56,13 @@ namespace detail {
 }
 
 template<class Dom>
-inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, const Options& opt = {}) {
+inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out) {
     constexpr Format fmt = DomFormat<Dom>::value;
     auto* ad = Registry::instance().find(fmt);
     if (!ad) return {false, "no adapter for requested format"};
 	auto filepath = ofToDataPath(path);
     Document doc;
-    auto r = ad->loadFile(filepath, doc, opt);
+    auto r = ad->loadFile(filepath, doc);
     if (!r) return r;
 
     if constexpr (std::is_same_v<Dom, nlohmann::json>) {
@@ -95,9 +94,9 @@ inline ofx::configbridge::Result loadFile(const std::string& path, Dom& out, con
 }
 
 template<class Dom>
-inline Dom loadFile(const std::string& path, const Options& opt = {}) {
+inline Dom loadFile(const std::string& path) {
     Dom out;
-    auto r = loadFile<Dom>(path, out, opt);
+    auto r = loadFile<Dom>(path, out);
     if (!r) throw std::runtime_error(r.message);
     return out;
 }
@@ -125,12 +124,12 @@ inline Result dumpText(const Dom& in, std::string& outText, const Options& opt =
 }
 
 template<class Dom>
-inline Result parseText(const std::string& text, Dom& out, const Options& opt = {}) {
+inline Result parseText(const std::string& text, Dom& out) {
     constexpr Format fmt = DomFormat<Dom>::value;
     auto* ad = Registry::instance().find(fmt);
     if (!ad) return {false, "no adapter for requested format"};
     Document doc;
-    auto r = ad->parseText(text, doc, opt);
+    auto r = ad->parseText(text, doc);
     if (!r) return r;
     if constexpr (std::is_same_v<Dom, nlohmann::json> || std::is_same_v<Dom, nlohmann::ordered_json>) {
 		if (doc.type != Document::Type::Json) return Result{false, "parsed doc is not JSON"};

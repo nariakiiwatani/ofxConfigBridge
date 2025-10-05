@@ -98,12 +98,19 @@ dumpText(parsed, output);
 ## 🔧 Configuration Options
 
 ```cpp
+// Options are used for conversion and export operations
 Options opt;
-opt.auto_number_conversion = true;   // Auto-convert number strings
-opt.auto_boolean_conversion = true;  // Auto-convert boolean strings
-opt.float_precision = 6;             // Float output precision
+opt.float_precision = 6;  // Control floating-point output precision
 
-auto result = loadFile<YAML::Node>("config.yaml", opt);
+// Convert with options
+auto json = convert<nlohmann::json>(yaml, opt);
+
+// Export to text with options
+std::string output;
+dumpText(data, output, opt);
+
+// Save file with options
+saveFile("output.json", data, opt);
 ```
 
 ---
