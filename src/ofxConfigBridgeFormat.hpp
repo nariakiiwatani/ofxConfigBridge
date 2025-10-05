@@ -27,8 +27,8 @@ struct Result {
 };
 
 struct Options {
-    bool strict_numbers  = true;
-    bool strict_booleans = true;
+    bool auto_number_conversion = true;
+    bool auto_boolean_conversion = true;
     int  float_precision = 6;
 };
 
